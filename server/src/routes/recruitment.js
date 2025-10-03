@@ -1,0 +1,10 @@
+const router = require('express').Router();
+const { authenticate, authorize, prisma } = require('../utils/auth');
+router.use(authenticate);
+router.post('/jobs', authorize('ADMIN', 'MANAGER'), async (req, res, next) => { try { res.json(await prisma.jobPosting.create({ data: req.body })); } catch (e) { next(e); } });
+router.get('/jobs', async (req, res, next) => { try { res.json(await prisma.jobPosting.findMany({ include: { applicants: true } })); } catch (e) { next(e); } });
+router.post('/jobs/:id/applicants', async (req, res, next) => { try { const { name, email, resumeUrl } = req.body; const app = await prisma.applicant.create({ data: { jobId: req.params.id, name, email, resumeUrl } }); res.json(app); } catch (e) { next(e); } });
+router.put('/applicants/:id', authorize('ADMIN', 'MANAGER'), async (req, res, next) => { try { res.json(await prisma.applicant.update({ where: { id: req.params.id }, data: req.body })); } catch (e) { next(e); } });
+router.post('/onboarding', authorize('ADMIN', 'MANAGER'), async (req, res, next) => { try { const task = await prisma.onboardingTask.create({ data: req.body }); res.json(task); } catch (e) { next(e); } });
+router.get('/onboarding', async (req, res, next) => { try { res.json(await prisma.onboardingTask.findMany({ where: { userId: req.query.userId } })); } catch (e) { next(e); } });
+module.exports = router;

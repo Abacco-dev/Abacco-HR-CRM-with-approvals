@@ -1,0 +1,345 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  EMPLOYEE
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LEAVE
+  WFH
+}
+
+enum ApplicantStatus {
+  APPLIED
+  SCREENING
+  INTERVIEW
+  OFFERED
+  HIRED
+  REJECTED
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(EMPLOYEE)
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  profile            EmployeeProfile?
+  teamsLed           Team[]              @relation("TeamLeader")
+  teamMembers        TeamMember[]
+  documents          Document[]
+  targets            Target[]            @relation("TargetUser")
+  reviews            PerformanceReview[] @relation("Reviewee")
+  givenReviews       PerformanceReview[] @relation("Reviewer")
+  attendance         AttendanceRecord[]
+  leaves             LeaveRequest[]
+  enrollments        Enrollment[]
+  onboarding         OnboardingTask[]
+  recognitions       Recognition[]       @relation("RecognitionTo")
+  kudosGiven         Recognition[]       @relation("RecognitionFrom")
+  compensations      Compensation[]
+  payrolls           PayrollRecord[]
+  notifications      Notification[]
+  surveyResponses    SurveyResponse[]
+  requestedApprovals ApprovalRequest[]   @relation("ApprovalRequester")
+  reviewedApprovals  ApprovalRequest[]   @relation("ApprovalReviewer")
+  skills             UserSkill[]
+}
+
+model EmployeeProfile {
+  id               String  @id @default(cuid())
+  user             User    @relation(fields: [userId], references: [id])
+  userId           String  @unique
+  jobTitle         String?
+  department       String?
+  location         String?
+  emergencyContact String?
+  dependents       Int?
+
+  skills UserSkill[] @relation("ProfileSkills")
+}
+
+model Skill {
+  id    String      @id @default(cuid())
+  name  String      @unique
+  users UserSkill[]
+}
+
+model UserSkill {
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  skill   Skill  @relation(fields: [skillId], references: [id])
+  skillId String
+
+  profile   EmployeeProfile @relation("ProfileSkills", fields: [profileId], references: [id])
+  profileId String
+
+  level Int @default(1)
+
+  @@id([userId, skillId])
+}
+
+model Document {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  type      String
+  url       String
+  createdAt DateTime @default(now())
+}
+
+model Team {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  leader      User         @relation("TeamLeader", fields: [leaderId], references: [id])
+  leaderId    String
+  members     TeamMember[]
+  teamTargets Target[]
+}
+
+model TeamMember {
+  id     String @id @default(cuid())
+  team   Team   @relation(fields: [teamId], references: [id])
+  teamId String
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+  role   String @default("MEMBER")
+
+  @@unique([teamId, userId])
+}
+
+model Target {
+  id        String    @id @default(cuid())
+  title     String
+  period    String // e.g. 2025-09
+  value     Float
+  achieved  Float     @default(0)
+  dueDate   DateTime?
+  status    String    @default("ON_TRACK")
+  user      User?     @relation("TargetUser", fields: [userId], references: [id])
+  userId    String?
+  team      Team?     @relation(fields: [teamId], references: [id])
+  teamId    String?
+  createdAt DateTime  @default(now())
+}
+
+model PerformanceReview {
+  id         String   @id @default(cuid())
+  user       User     @relation("Reviewee", fields: [userId], references: [id])
+  userId     String
+  reviewer   User     @relation("Reviewer", fields: [reviewerId], references: [id])
+  reviewerId String
+  period     String
+  rating     Int
+  feedback   String?
+  goalsJson  Json?
+  createdAt  DateTime @default(now())
+}
+
+model AttendanceRecord {
+  id              String           @id @default(cuid())
+  user            User             @relation(fields: [userId], references: [id])
+  userId          String
+  date            DateTime
+  status          AttendanceStatus @default(PRESENT)
+  clockIn         DateTime?
+  clockOut        DateTime?
+  overtimeMinutes Int              @default(0)
+
+  @@unique([userId, date])
+}
+
+model LeaveRequest {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  type      String
+  startDate DateTime
+  endDate   DateTime
+  status    String   @default("PENDING")
+  reason    String?
+}
+
+model Training {
+  id          String       @id @default(cuid())
+  title       String
+  description String?
+  startDate   DateTime?
+  endDate     DateTime?
+  enrollments Enrollment[]
+}
+
+model Enrollment {
+  id             String    @id @default(cuid())
+  training       Training  @relation(fields: [trainingId], references: [id])
+  trainingId     String
+  user           User      @relation(fields: [userId], references: [id])
+  userId         String
+  status         String    @default("ENROLLED")
+  completionDate DateTime?
+  certificateUrl String?
+}
+
+model JobPosting {
+  id          String      @id @default(cuid())
+  title       String
+  description String?
+  status      String      @default("OPEN")
+  applicants  Applicant[]
+}
+
+model Applicant {
+  id        String          @id @default(cuid())
+  job       JobPosting      @relation(fields: [jobId], references: [id])
+  jobId     String
+  name      String
+  email     String
+  resumeUrl String?
+  status    ApplicantStatus @default(APPLIED)
+  notes     String?
+}
+
+model OnboardingTask {
+  id      String     @id @default(cuid())
+  user    User       @relation(fields: [userId], references: [id])
+  userId  String
+  title   String
+  status  TaskStatus @default(TODO)
+  dueDate DateTime?
+}
+
+model Survey {
+  id        String           @id @default(cuid())
+  title     String
+  questions SurveyQuestion[]
+  responses SurveyResponse[]
+}
+
+model SurveyQuestion {
+  id       String         @id @default(cuid())
+  survey   Survey         @relation(fields: [surveyId], references: [id])
+  surveyId String
+  text     String
+  qtype    String         @default("text")
+  answers  SurveyAnswer[]
+}
+
+model SurveyResponse {
+  id        String         @id @default(cuid())
+  survey    Survey         @relation(fields: [surveyId], references: [id])
+  surveyId  String
+  user      User           @relation(fields: [userId], references: [id])
+  userId    String
+  createdAt DateTime       @default(now())
+  answers   SurveyAnswer[]
+}
+
+model SurveyAnswer {
+  id         String         @id @default(cuid())
+  response   SurveyResponse @relation(fields: [responseId], references: [id])
+  responseId String
+  question   SurveyQuestion @relation(fields: [questionId], references: [id])
+  questionId String
+  value      String
+}
+
+model Recognition {
+  id         String   @id @default(cuid())
+  from       User     @relation("RecognitionFrom", fields: [fromUserId], references: [id])
+  fromUserId String
+  to         User     @relation("RecognitionTo", fields: [toUserId], references: [id])
+  toUserId   String
+  message    String
+  points     Int      @default(1)
+  createdAt  DateTime @default(now())
+}
+
+model Compensation {
+  id            String   @id @default(cuid())
+  user          User     @relation(fields: [userId], references: [id])
+  userId        String
+  baseSalary    Float
+  bonus         Float    @default(0)
+  benefits      Json?
+  effectiveFrom DateTime @default(now())
+}
+
+model PayrollRecord {
+  id         String    @id @default(cuid())
+  user       User      @relation(fields: [userId], references: [id])
+  userId     String
+  period     String
+  gross      Float
+  deductions Float     @default(0)
+  net        Float
+  paidAt     DateTime?
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  ntype     String
+  content   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model IntegrationSetting {
+  id     String @id @default(cuid())
+  itype  String
+  config Json
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  action    String
+  entity    String?
+  entityId  String?
+  createdAt DateTime @default(now())
+}
+
+model ApprovalRequest {
+  id            String    @id @default(cuid())
+  actionType    String
+  entity        String
+  payload       Json
+  requestedBy   User      @relation("ApprovalRequester", fields: [requestedById], references: [id])
+  requestedById String
+  status        String    @default("PENDING")
+  reason        String?
+  reviewedBy    User?     @relation("ApprovalReviewer", fields: [reviewedById], references: [id])
+  reviewedById  String?
+  createdAt     DateTime  @default(now())
+  reviewedAt    DateTime?
+}
+
+model Employee {
+  id    Int    @id @default(autoincrement())
+  name  String
+  email String @unique
+  role  String
+}
