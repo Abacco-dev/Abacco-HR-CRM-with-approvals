@@ -1,427 +1,340 @@
 import React, { useState, useEffect } from "react";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
+import { Users, Calendar, Clock, UserCheck, Briefcase } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext.jsx";
+import StatCard from "../pages/StatCard";
+import PerformanceChart from "../pages/PerformanceChart";
+import DepartmentStats from "../pages/DepartmentStats";
+import EmployeeTable from "../pages/EmployeeTable";
+import AnnouncementsAndInterviews from "./AnnouncementsAndInterviews";
 
-// 🔑 Assume we get role from AuthContext or backend
-// Example: "ADMIN" | "HR" | "EMPLOYEE"
+// 🔑 User Authentication - Replace with actual auth context
 const loggedInUser = {
-  role: "ADMIN", // change to EMPLOYEE to test employee view
-  name: "Fakhri Boden",
+  role: "ADMIN", // Options: "ADMIN" | "HR" | "EMPLOYEE"
+};
+
+// --------- Dummy Data ---------
+const dummyData = {
+  overview: {
+    totalEmployees: 522,
+    activeEmployees: 500,
+    attendanceRate: 95.8,
+    pendingLeaveRequests: 15,
+    newHires: 8,
+    openPositions: 12,
+  },
+  performanceMetrics: [
+    { month: "Apr", closed: 145, target: 150, efficiency: 96 },
+    { month: "May", closed: 178, target: 180, efficiency: 98 },
+    { month: "Jun", closed: 165, target: 170, efficiency: 97 },
+    { month: "Jul", closed: 192, target: 200, efficiency: 96 },
+    { month: "Aug", closed: 210, target: 210, efficiency: 100 },
+    { month: "Sep", closed: 198, target: 200, efficiency: 99 },
+  ],
+  departmentStats: [
+    { department: "Sales", count: 145, performance: 94 },
+    { department: "Marketing", count: 78, performance: 91 },
+    // { department: "Developing", count: 120, performance: 95 },
+    { department: "HR", count: 32, performance: 88 },
+    // { department: "Finance", count: 45, performance: 92 },
+    // { department: "Operations", count: 66, performance: 89 },
+  ],
+  employees: [
+    {
+      id: "EMP002",
+      name: "Aditya Wibowo",
+      role: "Creative Director",
+      department: "Marketing",
+      jobLevel: "Senior Staff",
+      status: "Active",
+      avatar: "AW",
+      totalLeads: 120,
+      pendingLeads: 5,
+      loginTime: "09:10 AM",
+      performance: 96,
+    },
+    {
+      id: "EMP003",
+      name: "Fahmi Pratama",
+      role: "Project Manager",
+      department: "Developing",
+      jobLevel: "Middle Staff",
+      status: "Active",
+      avatar: "FP",
+      totalLeads: 95,
+      pendingLeads: 10,
+      loginTime: "09:20 AM",
+      performance: 92,
+    },
+    {
+      id: "EMP001",
+      name: "Fakhri Boden",
+      role: "Fullstack Developer",
+      department: "Developing",
+      jobLevel: "Junior Staff",
+      status: "On Leave",
+      avatar: "FB",
+      totalLeads: 40,
+      pendingLeads: 8,
+      loginTime: "On Leave",
+      performance: 88,
+    },
+    {
+      id: "EMP004",
+      name: "Sarah Mitchell",
+      role: "Sales Executive",
+      department: "Sales",
+      jobLevel: "Middle Staff",
+      status: "Active",
+      avatar: "SM",
+      totalLeads: 87,
+      pendingLeads: 6,
+      loginTime: "08:45 AM",
+      performance: 94,
+    },
+    {
+      id: "EMP005",
+      name: "David Chen",
+      role: "HR Manager",
+      department: "HR",
+      jobLevel: "Senior Staff",
+      status: "Active",
+      avatar: "DC",
+      totalLeads: 65,
+      pendingLeads: 3,
+      loginTime: "09:00 AM",
+      performance: 89,
+    },
+  ],
+  announcements: [
+    {
+      id: 1,
+      title: "Company-Wide Town Hall Meeting",
+      desc: "Join us for Q3 review and Q4 planning on Oct 15, 2025",
+      date: "2025-10-15",
+      priority: "high",
+    },
+    {
+      id: 2,
+      title: "Mass Leave Period",
+      desc: "Collective leave scheduled for Dec 24-26, 2025",
+      date: "2025-12-24",
+      priority: "medium",
+    },
+    {
+      id: 3,
+      title: "New Health Benefits",
+      desc: "Enhanced health insurance coverage starting Nov 1",
+      date: "2025-11-01",
+      priority: "high",
+    },
+    {
+      id: 4,
+      title: "Team Building Event",
+      desc: "Annual retreat scheduled for Nov 20-22, 2025",
+      date: "2025-11-20",
+      priority: "low",
+    },
+  ],
+  upcomingInterviews: [
+    {
+      id: 1,
+      candidate: "Chiurul Aji",
+      position: "UI/UX Designer",
+      department: "Design",
+      time: "11:00 AM",
+      date: "2025-10-06",
+      interviewer: "Aditya Wibowo",
+      type: "Technical Round",
+    },
+    {
+      id: 3,
+      candidate: "Lisa Anderson",
+      position: "Sales Manager",
+      department: "Sales",
+      time: "10:00 AM",
+      date: "2025-10-07",
+      interviewer: "Sarah Mitchell",
+      type: "HR Round",
+    },
+  ],
 };
 
 export default function Dashboard() {
-  const dummyData = {
-    totalEmployees: 522,
-    attendanceToday: 500,
-    requestPaidLeave: 15,
-    employeePerformance: [
-      { date: "2025-09-01", closed: 12, target: 15 },
-      { date: "2025-09-02", closed: 18, target: 20 },
-      { date: "2025-09-03", closed: 22, target: 25 },
-      { date: "2025-09-04", closed: 15, target: 20 },
-      { date: "2025-09-05", closed: 30, target: 30 },
-      { date: "2025-09-06", closed: 25, target: 28 },
-    ],
-    employees: [
-      {
-        name: "Aditya Wibowo",
-        role: "Creative Director",
-        jobLevel: "Senior Staff",
-        status: "Active",
-        totalLeads: 120,
-        pendingLeads: 5,
-        loginTime: "09:10 AM",
-      },
-      {
-        name: "Fahmi Pratama",
-        role: "Project Manager",
-        jobLevel: "Middle Staff",
-        status: "Active",
-        totalLeads: 95,
-        pendingLeads: 10,
-        loginTime: "09:20 AM",
-      },
-      {
-        name: "Fakhri Boden",
-        role: "Fullstack Developer",
-        jobLevel: "Junior Staff",
-        status: "Paid Leave",
-        totalLeads: 40,
-        pendingLeads: 8,
-        loginTime: "On Leave",
-      },
-    ],
-    announcements: [
-      { title: "Mass Leave", desc: "Collective leave May 1–3, 2024" },
-      { title: "Eid Al-Fitr", desc: "Holiday set for Wed–Thu, Apr 10–11, 2024" },
-      { title: "Birthday Fahmi Pratama", desc: "Fahmi turns 33 today 🎉" },
-      { title: "Birthday Fakhri Boden", desc: "Fakhri turns 28 today 🎉" },
-      { title: "Pay Day", desc: "Salary has been processed, check your account" },
-    ],
-    interviews: [
-      {
-        candidate: "Chiurul Aji",
-        position: "UI/UX Designer",
-        time: "11:00 AM",
-      },
-      {
-        candidate: "Gusto Nusamba",
-        position: "Fullstack Developer",
-        time: "2:00 PM",
-      },
-    ],
-  };
+  const { user } = useAuth();
+  const [data, setData] = useState(dummyData); // Using dummy data directly
 
-  const [data, setData] = useState(null);
-
+  // Uncomment for future backend integration
+  /*
   useEffect(() => {
-    setData(dummyData);
+    import("../pages/targets/data/dummyData")
+      .then((module) => setData(module.default))
+      .catch((err) => console.error("Error loading dummy data:", err));
   }, []);
+  */
 
-  if (!data) return <p className="text-center mt-10">Loading dashboard...</p>;
-
-  // 🔽 Filter employees for Employee role
   const visibleEmployees =
-    loggedInUser.role === "EMPLOYEE"
-      ? data.employees.filter((emp) => emp.name === loggedInUser.name)
+    user.role === "EMPLOYEE"
+      ? data.employees.filter((emp) => emp.id === user.id)
       : data.employees;
 
+  const isAdminOrHR = user.role === "ADMIN" || user.role === "HR";
+
   return (
-    <div className="p-6 bg-gray-100 min-h-screen">
-      <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
-
-      {/* Top Stats */}
-      {loggedInUser.role !== "EMPLOYEE" && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <div className="bg-white p-6 rounded-2xl shadow">
-            <p className="text-gray-500">Total Employees</p>
-            <h2 className="text-3xl font-bold">{data.totalEmployees}</h2>
-          </div>
-          <div className="bg-white p-6 rounded-2xl shadow">
-            <p className="text-gray-500">Today Attendance</p>
-            <h2 className="text-3xl font-bold">{data.attendanceToday}</h2>
-          </div>
-          <div className="bg-white p-6 rounded-2xl shadow">
-            <p className="text-gray-500">Request Paid Leave</p>
-            <h2 className="text-3xl font-bold">{data.requestPaidLeave}</h2>
+    <>
+  <header className=" bg-white border-b border-gray-200 sticky top-0 z-10 ">
+        <div className="px-6 py-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              {user.role === "EMPLOYEE" ? "My Dashboard" : "HR Dashboard"}
+            </h1>
+            <p className="text-sm text-gray-600 mt-1">
+              Welcome back, {user.name}
+            </p>
           </div>
         </div>
-      )}
-
-      {/* Employee Performance */}
-      <div className="bg-white p-6 rounded-2xl shadow mb-6">
-        <h2 className="font-semibold mb-4">Employee Performance (Leads)</h2>
-        <ResponsiveContainer width="100%" height={250}>
-          <LineChart data={data.employeePerformance}>
-            <XAxis dataKey="date" />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            <Line
-              type="monotone"
-              dataKey="closed"
-              stroke="#10b981"
-              strokeWidth={3}
-              dot={{ r: 4 }}
-              name="Closed Leads"
+      </header>
+    <div className="min-h-screen bg-gray-50">
+      <div className="p-6 max-w-7xl mx-auto">
+        {isAdminOrHR && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+            <StatCard
+              title="Total Employees"
+              value={data.overview.totalEmployees}
+              subtitle={`${data.overview.activeEmployees} active`}
+              icon={Users}
+              color="bg-blue-500"
+              trend="+12 this month"
             />
-            <Line
-              type="monotone"
-              dataKey="target"
-              stroke="#6366f1"
-              strokeWidth={2}
-              strokeDasharray="5 5"
-              dot={{ r: 4 }}
-              name="Target"
+            <StatCard
+              title="Attendance Rate"
+              value={`${data.overview.attendanceRate}%`}
+              subtitle="Today's attendance"
+              icon={UserCheck}
+              color="bg-green-500"
+              trend="+2.4%"
             />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-
-      {/* Employee Status with Leads + Login Time */}
-      <div className="bg-white p-6 rounded-2xl shadow mb-6">
-        <h2 className="font-semibold mb-4">
-          {loggedInUser.role === "EMPLOYEE" ? "My Status" : "Employee Status"}
-        </h2>
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="border-b">
-              <th className="p-2">Name</th>
-              <th className="p-2">Role</th>
-              <th className="p-2">Job Level</th>
-              <th className="p-2">Status</th>
-              <th className="p-2">Total Leads</th>
-              <th className="p-2">Pending Leads</th>
-              <th className="p-2">Login Time</th>
-            </tr>
-          </thead>
-          <tbody>
-            {visibleEmployees.map((emp, i) => (
-              <tr key={i} className="border-b">
-                <td className="p-2">{emp.name}</td>
-                <td className="p-2">{emp.role}</td>
-                <td className="p-2">{emp.jobLevel}</td>
-                <td className="p-2">
-                  <span
-                    className={`px-3 py-1 rounded-full text-sm ${
-                      emp.status === "Active"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-yellow-100 text-yellow-700"
-                    }`}
-                  >
-                    {emp.status}
-                  </span>
-                </td>
-                <td className="p-2">{emp.totalLeads}</td>
-                <td className="p-2">{emp.pendingLeads}</td>
-                <td className="p-2">{emp.loginTime}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Announcements & Interviews */}
-      {loggedInUser.role !== "EMPLOYEE" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white p-6 rounded-2xl shadow">
-            <h2 className="font-semibold mb-4">Announcements</h2>
-            <ul className="space-y-3">
-              {data.announcements.map((a, i) => (
-                <li key={i} className="border-b pb-2">
-                  <p className="font-semibold">{a.title}</p>
-                  <p className="text-gray-600 text-sm">{a.desc}</p>
-                </li>
-              ))}
-            </ul>
+            <StatCard
+              title="Leave Requests"
+              value={data.overview.pendingLeaveRequests}
+              subtitle="Pending approval"
+              icon={Calendar}
+              color="bg-orange-500"
+            />
+            <StatCard
+              title="Open Positions"
+              value={data.overview.openPositions}
+              subtitle={`${data.overview.newHires} new hires`}
+              icon={Briefcase}
+              color="bg-purple-500"
+            />
           </div>
+        )}
 
-          <div className="bg-white p-6 rounded-2xl shadow">
-            <h2 className="font-semibold mb-4">Schedule Interviews</h2>
-            <ul className="space-y-3">
-              {data.interviews.map((i, idx) => (
-                <li key={idx} className="border-b pb-2">
-                  <p className="font-semibold">{i.candidate}</p>
-                  <p className="text-gray-600 text-sm">
-                    {i.position} - {i.time}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      )}
+        <PerformanceChart data={data.performanceMetrics} />
+
+        {isAdminOrHR && <DepartmentStats data={data.departmentStats} />}
+
+        <EmployeeTable employees={visibleEmployees} role={loggedInUser.role} />
+
+        {isAdminOrHR && <AnnouncementsAndInterviews data={data} />}
+      </div>
     </div>
+    </>
   );
 }
 
+
+
+
+
+
 // import React, { useState, useEffect } from "react";
-// import {
-//   LineChart,
-//   Line,
-//   XAxis,
-//   YAxis,
-//   Tooltip,
-//   ResponsiveContainer,
-//   Legend,
-// } from "recharts";
+// import { Users, Calendar, Clock, UserCheck, Briefcase } from "lucide-react";
+// import StatCard from "../pages/StatCard";
+// import PerformanceChart from "../pages/PerformanceChart";
+// import DepartmentStats from "../pages/DepartmentStats";
+// import EmployeeTable from "../pages/EmployeeTable";
+// import AnnouncementsAndInterviews from "./AnnouncementsAndInterviews";
+
+// // 🔑 User Authentication - Replace with actual auth context
+// const loggedInUser = {
+//   role: "ADMIN", // Options: "ADMIN" | "HR" | "EMPLOYEE"
+//   name: "Fakhri Boden",
+//   id: "EMP001",
+// };
 
 // export default function Dashboard() {
-//   // Dummy data (instead of backend API)
-//   const dummyData = {
-//     totalEmployees: 522,
-//     attendanceToday: 500,
-//     requestPaidLeave: 15,
-//     employeePerformance: [
-//       { date: "2025-09-01", closed: 12, target: 15 },
-//       { date: "2025-09-02", closed: 18, target: 20 },
-//       { date: "2025-09-03", closed: 22, target: 25 },
-//       { date: "2025-09-04", closed: 15, target: 20 },
-//       { date: "2025-09-05", closed: 30, target: 30 },
-//       { date: "2025-09-06", closed: 25, target: 28 },
-//     ],
-//     employees: [
-//       {
-//         name: "Aditya Wibowo",
-//         role: "Creative Director",
-//         jobLevel: "Senior Staff",
-//         status: "Active",
-//       },
-//       {
-//         name: "Fahmi Pratama",
-//         role: "Project Manager",
-//         jobLevel: "Middle Staff",
-//         status: "Active",
-//       },
-//       {
-//         name: "Fakhri Boden",
-//         role: "Fullstack Developer",
-//         jobLevel: "Junior Staff",
-//         status: "Paid Leave",
-//       },
-//     ],
-//     announcements: [
-//       { title: "Mass Leave", desc: "Collective leave May 1–3, 2024" },
-//       { title: "Eid Al-Fitr", desc: "Holiday set for Wed–Thu, Apr 10–11, 2024" },
-//       { title: "Birthday Fahmi Pratama", desc: "Fahmi turns 33 today 🎉" },
-//       { title: "Birthday Fakhri Boden", desc: "Fakhri turns 28 today 🎉" },
-//       { title: "Pay Day", desc: "Salary has been processed, check your account" },
-//     ],
-//     interviews: [
-//       {
-//         candidate: "Chiurul Aji",
-//         position: "UI/UX Designer",
-//         time: "11:00 AM",
-//       },
-//       {
-//         candidate: "Gusto Nusamba",
-//         position: "Fullstack Developer",
-//         time: "2:00 PM",
-//       },
-//     ],
-//   };
-
 //   const [data, setData] = useState(null);
 
 //   useEffect(() => {
-//     // 🔽 Commented backend fetch
-//     /*
-//     fetch("http://localhost:4000/api/analytics/dashboard", {
-//       method: "GET",
-//       credentials: "include",
-//     })
-//       .then((res) => res.json())
-//       .then((json) => setData(json))
-//       .catch((err) => console.error("Error loading dashboard:", err));
-//     */
-
-//     // 🔽 Using dummy data instead
-//     setData(dummyData);
+//     // Replace with API call in real project
+//     import("../pages/targets/data/dummyData").then((module) => setData(module.default));
 //   }, []);
 
-//   if (!data) return <p className="text-center mt-10">Loading dashboard...</p>;
+//   if (!data) return <p>Loading dashboard...</p>;
+
+//   const visibleEmployees =
+//     loggedInUser.role === "EMPLOYEE"
+//       ? data.employees.filter((emp) => emp.id === loggedInUser.id)
+//       : data.employees;
+
+//   const isAdminOrHR = loggedInUser.role === "ADMIN" || loggedInUser.role === "HR";
 
 //   return (
-//     <div className="p-6 bg-gray-100 min-h-screen">
-//       <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
+//     <div className="min-h-screen bg-gray-50">
+//       {/* Header */}
+//       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+//         <div className="px-6 py-4 flex items-center justify-between">
+//           <div>
+//             <h1 className="text-2xl font-bold text-gray-900">HR Dashboard</h1>
+//             <p className="text-sm text-gray-600 mt-1">Welcome back, {loggedInUser.name}</p>
+//           </div>
+//         </div>
+//       </header>
 
-//       {/* Top Stats */}
-//       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-//         <div className="bg-white p-6 rounded-2xl shadow">
-//           <p className="text-gray-500">Total Employees</p>
-//           <h2 className="text-3xl font-bold">{data.totalEmployees}</h2>
-//         </div>
-//         <div className="bg-white p-6 rounded-2xl shadow">
-//           <p className="text-gray-500">Today Attendance</p>
-//           <h2 className="text-3xl font-bold">{data.attendanceToday}</h2>
-//         </div>
-//         <div className="bg-white p-6 rounded-2xl shadow">
-//           <p className="text-gray-500">Request Paid Leave</p>
-//           <h2 className="text-3xl font-bold">{data.requestPaidLeave}</h2>
-//         </div>
-//       </div>
-
-//       {/* Employee Performance */}
-//       <div className="bg-white p-6 rounded-2xl shadow mb-6">
-//         <h2 className="font-semibold mb-4">Employee Performance (Leads)</h2>
-//         <ResponsiveContainer width="100%" height={250}>
-//           <LineChart data={data.employeePerformance}>
-//             <XAxis dataKey="date" />
-//             <YAxis />
-//             <Tooltip />
-//             <Legend />
-//             <Line
-//               type="monotone"
-//               dataKey="closed"
-//               stroke="#10b981"
-//               strokeWidth={3}
-//               dot={{ r: 4 }}
-//               name="Closed Leads"
+//       <div className="p-6 max-w-7xl mx-auto">
+//         {isAdminOrHR && (
+//           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+//             <StatCard
+//               title="Total Employees"
+//               value={data.overview.totalEmployees}
+//               subtitle={`${data.overview.activeEmployees} active`}
+//               icon={Users}
+//               color="bg-blue-500"
+//               trend="+12 this month"
 //             />
-//             <Line
-//               type="monotone"
-//               dataKey="target"
-//               stroke="#6366f1"
-//               strokeWidth={2}
-//               strokeDasharray="5 5"
-//               dot={{ r: 4 }}
-//               name="Target"
+//             <StatCard
+//               title="Attendance Rate"
+//               value={`${data.overview.attendanceRate}%`}
+//               subtitle="Today's attendance"
+//               icon={UserCheck}
+//               color="bg-green-500"
+//               trend="+2.4%"
 //             />
-//           </LineChart>
-//         </ResponsiveContainer>
-//       </div>
+//             <StatCard
+//               title="Leave Requests"
+//               value={data.overview.pendingLeaveRequests}
+//               subtitle="Pending approval"
+//               icon={Calendar}
+//               color="bg-orange-500"
+//             />
+//             <StatCard
+//               title="Open Positions"
+//               value={data.overview.openPositions}
+//               subtitle={`${data.overview.newHires} new hires`}
+//               icon={Briefcase}
+//               color="bg-purple-500"
+//             />
+//           </div>
+//         )}
 
-//       {/* Employee Status */}
-//       <div className="bg-white p-6 rounded-2xl shadow mb-6">
-//         <h2 className="font-semibold mb-4">Employee Status</h2>
-//         <table className="w-full text-left border-collapse">
-//           <thead>
-//             <tr className="border-b">
-//               <th className="p-2">Name</th>
-//               <th className="p-2">Role</th>
-//               <th className="p-2">Job Level</th>
-//               <th className="p-2">Status</th>
-//             </tr>
-//           </thead>
-//           <tbody>
-//             {data.employees.map((emp, i) => (
-//               <tr key={i} className="border-b">
-//                 <td className="p-2">{emp.name}</td>
-//                 <td className="p-2">{emp.role}</td>
-//                 <td className="p-2">{emp.jobLevel}</td>
-//                 <td className="p-2">
-//                   <span
-//                     className={`px-3 py-1 rounded-full text-sm ${
-//                       emp.status === "Active"
-//                         ? "bg-green-100 text-green-700"
-//                         : "bg-yellow-100 text-yellow-700"
-//                     }`}
-//                   >
-//                     {emp.status}
-//                   </span>
-//                 </td>
-//               </tr>
-//             ))}
-//           </tbody>
-//         </table>
-//       </div>
+//         <PerformanceChart data={data.performanceMetrics} />
 
-//       {/* Announcements & Interviews */}
-//       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-//         {/* Announcements */}
-//         <div className="bg-white p-6 rounded-2xl shadow">
-//           <h2 className="font-semibold mb-4">Announcements</h2>
-//           <ul className="space-y-3">
-//             {data.announcements.map((a, i) => (
-//               <li key={i} className="border-b pb-2">
-//                 <p className="font-semibold">{a.title}</p>
-//                 <p className="text-gray-600 text-sm">{a.desc}</p>
-//               </li>
-//             ))}
-//           </ul>
-//         </div>
+//         {isAdminOrHR && <DepartmentStats data={data.departmentStats} />}
 
-//         {/* Schedule Interviews */}
-//         <div className="bg-white p-6 rounded-2xl shadow">
-//           <h2 className="font-semibold mb-4">Schedule Interviews</h2>
-//           <ul className="space-y-3">
-//             {data.interviews.map((i, idx) => (
-//               <li key={idx} className="border-b pb-2">
-//                 <p className="font-semibold">{i.candidate}</p>
-//                 <p className="text-gray-600 text-sm">
-//                   {i.position} - {i.time}
-//                 </p>
-//               </li>
-//             ))}
-//           </ul>
-//         </div>
+//         <EmployeeTable employees={visibleEmployees} role={loggedInUser.role} />
+
+//         {isAdminOrHR && <AnnouncementsAndInterviews data={data} />}
 //       </div>
 //     </div>
 //   );

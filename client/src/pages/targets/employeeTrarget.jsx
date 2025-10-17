@@ -132,7 +132,7 @@ export default function EmployeeTargets() {
         )}
 
         {/* Add Employee Form */}
-        <form onSubmit={handleAddEmployee} className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-6 rounded-lg shadow mb-8">
+        {/* <form onSubmit={handleAddEmployee} className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-6 rounded-lg shadow mb-8">
           <div className="space-y-4">
             <input type="text" name="name" value={newEmployee.name} onChange={handleChange} placeholder="Employee Name" className="w-full border rounded p-2" required />
             <input type="number" name="target" value={newEmployee.target} onChange={handleChange} placeholder="Target" className="w-full border rounded p-2" required />
@@ -161,7 +161,7 @@ export default function EmployeeTargets() {
               )}
             </button>
           </div>
-        </form>
+        </form> */}
 
         {/* Employee Table */}
         <div className="overflow-x-auto bg-white rounded-lg shadow mb-8">
