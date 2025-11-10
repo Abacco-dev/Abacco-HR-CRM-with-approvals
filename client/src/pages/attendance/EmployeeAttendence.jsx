@@ -14,71 +14,71 @@ export default function AttendanceManagement() {
   });
 
   // Attendance Records (kept original sample entries)
- const [attendanceList, setAttendanceList] = useState([
-  {
-    id: 1,
-    date: "2024-09-16",
-    status: "Present",
-    clockIn: "09:15 AM",
-    clockOut: "06:30 PM",
-    workHours: 8.25,
-    overtime: 0.5,
-    location: "Office - Biometric",
-    breaks: [
-      { start: "01:00 PM", end: "02:00 PM", duration: 60 }
-    ],
-    extraBreak: 0.25,
-    mouseClicks: 1523,
-    keyPresses: 3421
-  },
-  {
-    id: 2,
-    date: "2024-09-15",
-    status: "Present",
-    clockIn: "08:45 AM",
-    clockOut: "05:45 PM",
-    workHours: 8.0,
-    overtime: 0,
-    location: "Office - Mobile App",
-    breaks: [
-      { start: "01:15 PM", end: "02:00 PM", duration: 45 }
-    ],
-    extraBreak: 0.1,
-    mouseClicks: 1280,
-    keyPresses: 2985
-  },
-  {
-    id: 3,
-    date: "2024-09-14",
-    status: "Late",
-    clockIn: "10:30 AM",
-    clockOut: "06:00 PM",
-    workHours: 6.5,
-    overtime: 0,
-    location: "Office - Biometric",
-    breaks: [
-      { start: "01:30 PM", end: "02:30 PM", duration: 60 }
-    ],
-    extraBreak: 0.5,
-    mouseClicks: 965,
-    keyPresses: 2100
-  },
-  {
-    id: 4,
-    date: "2024-09-13",
-    status: "Absent",
-    clockIn: null,
-    clockOut: null,
-    workHours: 0,
-    overtime: 0,
-    location: null,
-    breaks: [],
-    reason: "Sick Leave",
-    extraBreak: 0,
-    mouseClicks: 0,
-    keyPresses: 0
-  }
-]);
+  const [attendanceList, setAttendanceList] = useState([
+    {
+      id: 1,
+      date: "2024-09-16",
+      status: "Present",
+      clockIn: "09:15 AM",
+      clockOut: "06:30 PM",
+      workHours: 8.25,
+      overtime: 0.5,
+      location: "Office - Biometric",
+      breaks: [
+        { start: "01:00 PM", end: "02:00 PM", duration: 60 }
+      ],
+      extraBreak: 0.25,
+      mouseClicks: 1523,
+      keyPresses: 3421
+    },
+    {
+      id: 2,
+      date: "2024-09-15",
+      status: "Present",
+      clockIn: "08:45 AM",
+      clockOut: "05:45 PM",
+      workHours: 8.0,
+      overtime: 0,
+      location: "Office - Mobile App",
+      breaks: [
+        { start: "01:15 PM", end: "02:00 PM", duration: 45 }
+      ],
+      extraBreak: 0.1,
+      mouseClicks: 1280,
+      keyPresses: 2985
+    },
+    {
+      id: 3,
+      date: "2024-09-14",
+      status: "Late",
+      clockIn: "10:30 AM",
+      clockOut: "06:00 PM",
+      workHours: 6.5,
+      overtime: 0,
+      location: "Office - Biometric",
+      breaks: [
+        { start: "01:30 PM", end: "02:30 PM", duration: 60 }
+      ],
+      extraBreak: 0.5,
+      mouseClicks: 965,
+      keyPresses: 2100
+    },
+    {
+      id: 4,
+      date: "2024-09-13",
+      status: "Absent",
+      clockIn: null,
+      clockOut: null,
+      workHours: 0,
+      overtime: 0,
+      location: null,
+      breaks: [],
+      reason: "Sick Leave",
+      extraBreak: 0,
+      mouseClicks: 0,
+      keyPresses: 0
+    }
+  ]);
 
   // Leave/Ovetime/Shift states (unchanged)
   const [leaveRequests, setLeaveRequests] = useState([
@@ -404,16 +404,16 @@ export default function AttendanceManagement() {
     }
   };
 
-// ✅ Get total working hours for the current day only
-const getTotalHours = () => {
-  const today = new Date();
-  const day = today.getDay(); // 0 = Sunday, 1 = Monday, ...
+  // ✅ Get total working hours for the current day only
+  const getTotalHours = () => {
+    const today = new Date();
+    const day = today.getDay(); // 0 = Sunday, 1 = Monday, ...
 
-  // Office timing logic (matches your getTodayLoginTiming)
-  if (day >= 1 && day <= 5) return "10.00";   // Mon–Fri: 10 hours shift
-  if (day === 6) return "8.00";               // Sat: 8 hours shift
-  return "OFF";                               // Sun: Off day
-};
+    // Office timing logic (matches your getTodayLoginTiming)
+    if (day >= 1 && day <= 5) return "10.00";   // Mon–Fri: 10 hours shift
+    if (day === 6) return "8.00";               // Sat: 8 hours shift
+    return "OFF";                               // Sun: Off day
+  };
 
 
   const getTotalOvertime = () => attendanceList.reduce((sum, r) => sum + (r.overtime || 0), 0);

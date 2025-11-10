@@ -1,0 +1,172 @@
+// server/src/server.js
+require("dotenv").config();
+
+const express = require("express");
+const cors = require("cors");
+const cookieParser = require("cookie-parser");
+const helmet = require("helmet");
+const morgan = require("morgan");
+
+// ✅ Import from utils (now correct path)
+const { hashPassword, verifyPassword, signToken, authenticate, authorize } = require("./src/utils/auth");
+
+// ✅ Import routers
+const authRouter = require("./src/routes/auth");
+const employeesRouter = require("./src/routes/employees");
+const teamRoutes = require("./src/routes/teams");
+const targetsRouter = require("./src/routes/targets");
+const performanceRouter = require("./src/routes/performance");
+const attendanceActivityRouter = require("./src/routes/attendanceActivity");
+const trainingRouter = require("./src/routes/training");
+const recruitmentRouter = require("./src/routes/recruitment");
+const engagementRouter = require("./src/routes/engagement");
+const compensationRouter = require("./src/routes/compensation");
+const analyticsRouter = require("./src/routes/analytics");
+const documentsRouter = require("./src/routes/documents");
+const approvalsRouter = require("./src/routes/approvals");
+const leaveRoutes = require("./src/routes/leaveRoutes");
+const notificationsRouter = require("./src/routes/notifications");
+const attendanceRoutes = require("./src/routes/attendanceRoutes");
+
+
+
+// ✅ Error handler
+const { errorHandler } = require("./src/utils/error");
+
+const app = express();
+
+// ✅ Middleware setup
+app.use(helmet());
+app.use(express.json({ limit: "2mb" }));
+app.use(cookieParser());
+app.use(morgan("dev"));
+app.use(
+  cors({
+    origin: process.env.CLIENT_ORIGIN || "http://localhost:5174",
+    credentials: true,
+  })
+);
+
+// ✅ Health check route
+app.get("/", (req, res) =>
+  res.json({
+    name: "Abacco HR CRM API",
+    status: "ok",
+    time: new Date().toISOString(),
+  })
+);
+
+// ✅ Public routes
+app.use("/api/auth", authRouter);
+
+// ✅ Protected routes (authenticated)
+app.use("/api/employees", authenticate, employeesRouter);
+app.use("/api/teams", authenticate, teamRoutes);
+app.use("/api/targets", authenticate, targetsRouter);
+app.use("/api/performance", authenticate, performanceRouter);
+app.use("/api/attendance", authenticate, attendanceActivityRouter);
+app.use("/api/training", authenticate, trainingRouter);
+app.use("/api/recruitment", authenticate, recruitmentRouter);
+app.use("/api/engagement", authenticate, engagementRouter);
+app.use("/api/compensation", authenticate, compensationRouter);
+app.use("/api/analytics", authenticate, analyticsRouter);
+app.use("/api/documents", authenticate, documentsRouter);
+app.use("/api/approvals", authenticate, approvalsRouter);
+app.use("/api/leaves", authenticate, leaveRoutes);
+app.use("/api/notifications", authenticate, notificationsRouter);
+app.use("/api/attendance", authenticate, attendanceRoutes);
+
+
+
+// ✅ Global error handler (last)
+app.use(errorHandler);
+
+// ✅ Start server
+const PORT = process.env.PORT || 4000;
+app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
+
+module.exports = app;
+
+
+
+
+// require('dotenv').config();
+
+// const express = require('express');
+// const cors = require('cors');
+// const cookieParser = require('cookie-parser');
+// const helmet = require('helmet');
+// const morgan = require('morgan');
+
+// // Import routers
+// const { hashPassword, verifyPassword, signToken, authenticate, authorize } = require("../utils/auth");
+// const { authRouter } = require('./routes/auth');
+// // const { protectedRouter } = require('../../se');
+// const employeesRouter = require('./routes/employees');
+// const teamRoutes = require("./routes/teams");
+// const targetsRouter = require('./routes/targets');
+// const performanceRouter = require('./routes/performance');
+// const attendanceActivityRouter = require('./routes/attendanceActivity');
+// const trainingRouter = require('./routes/training');
+// const recruitmentRouter = require('./routes/recruitment');
+// const engagementRouter = require('./routes/engagement');
+// const compensationRouter = require('./routes/compensation');
+// const analyticsRouter = require('./routes/analytics');
+// const documentsRouter = require('./routes/documents');
+// const approvalsRouter = require('./routes/approvals');  // adjust path if approvals.js is not in routes
+// console.log('Approvals router required in server.js');  // <-- add this here
+
+// // Error handler middleware
+// const { errorHandler } = require('./utils/error');
+
+// const app = express();
+// app.use(express.json());
+// app.use(helmet());
+// app.use(express.json({ limit: '2mb' }));
+// app.use(cookieParser());
+// app.use(morgan('dev'));
+// app.use(cors({
+//   origin: process.env.CLIENT_ORIGIN || 'http://localhost:5174',
+//   credentials: true
+// }));
+
+// // Health check route
+// app.get('/', (req, res) => res.json({
+//   name: 'Abacco HR CRM API',
+//   status: 'ok'
+// }));
+
+// // Auth routes
+// app.use('/api/auth', authRouter);
+// app.use('/api/approvals', (req, res, next) => {
+//   console.log(`Request received for /api/approvals: ${req.method} ${req.url}`);
+//   next();
+// }, approvalsRouter);
+
+// // Protected routes (ensure these are protected by your auth logic)
+// // app.use('/api/protected', protectedRouter);
+
+// // Other domain-specific API routes
+// app.use('/api/employees', employeesRouter);
+// app.use("/api/teams", teamRoutes);
+// app.use('/api/targets', targetsRouter);
+// app.use('/api/performance', performanceRouter);
+// app.use("/api/attendance", attendanceActivityRouter);
+// app.use('/api/recruitment', recruitmentRouter);
+// app.use('/api/engagement', engagementRouter);
+// app.use('/api/compensation', compensationRouter);
+// app.use('/api/analytics', analyticsRouter);
+// app.use('/api/documents', documentsRouter);
+// app.use('/api/approvals', approvalsRouter);
+
+
+// // Global error handler (important: last middleware)
+
+
+// // Auth routes
+// app.use('/api/auth', authRouter);
+// app.use(errorHandler);
+// app.listen(4000, () => {
+//   console.log("Server running on port 4000")
+// })
+
