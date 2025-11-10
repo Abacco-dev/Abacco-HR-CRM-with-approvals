@@ -1,21 +1,26 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import axios from "axios";
-import { jwtDecode } from "jwt-decode"; // ✅ correct for Vite
+import { jwtDecode } from "jwt-decode"; // ✅ Correct import for Vite
 
+// Create Context
 const AuthCtx = createContext(null);
 
+// Axios instance
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:4000",
 });
 
+// Hook for easy access
 export function useAuth() {
   return useContext(AuthCtx);
 }
 
+// Auth Provider
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // 🔹 Load user and token from localStorage on page refresh
   useEffect(() => {
     const token = localStorage.getItem("token");
     const userData = localStorage.getItem("user");
@@ -24,7 +29,7 @@ export function AuthProvider({ children }) {
       try {
         const decoded = jwtDecode(token);
 
-        // ✅ Check if token is expired
+        // ✅ Validate token expiry
         if (decoded.exp * 1000 > Date.now()) {
           setUser(JSON.parse(userData));
           api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
@@ -39,16 +44,25 @@ export function AuthProvider({ children }) {
     setLoading(false);
   }, []);
 
+  // 🔹 Login user
   async function login(email, password) {
     const { data } = await api.post("/api/auth/login", { email, password });
 
+    // ✅ Save credentials
     localStorage.setItem("token", data.token);
     localStorage.setItem("user", JSON.stringify(data.user));
 
+    // ✅ Set axios header
     api.defaults.headers.common["Authorization"] = `Bearer ${data.token}`;
+
+    // ✅ Set user state
     setUser(data.user);
+
+    // ✅ Return the response for Login.jsx
+    return data; // { token, user }
   }
 
+  // 🔹 Logout user
   function logout() {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -56,21 +70,33 @@ export function AuthProvider({ children }) {
     window.location.href = "/login";
   }
 
+  // Context value
+  const value = {
+    user,
+    login,
+    logout,
+    api,
+    loading,
+  };
+
   return (
-    <AuthCtx.Provider value={{ user, login, logout, api, loading }}>
-      {children}
+    <AuthCtx.Provider value={value}>
+      {!loading && children}
     </AuthCtx.Provider>
   );
 }
 
-// import { createContext, useContext, useEffect, useState } from 'react';
-// import axios from 'axios';
-// import jwtDecode from "jwt-decode";
+
+
+
+// import { createContext, useContext, useEffect, useState } from "react";
+// import axios from "axios";
+// import { jwtDecode } from "jwt-decode"; // ✅ correct for Vite
 
 // const AuthCtx = createContext(null);
 
 // const api = axios.create({
-//   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:4000',
+//   baseURL: import.meta.env.VITE_API_URL || "http://localhost:4000",
 // });
 
 // export function useAuth() {
@@ -82,34 +108,43 @@ export function AuthProvider({ children }) {
 //   const [loading, setLoading] = useState(true);
 
 //   useEffect(() => {
-//     const token = localStorage.getItem('token');
-//     const userData = localStorage.getItem('user');
+//     const token = localStorage.getItem("token");
+//     const userData = localStorage.getItem("user");
 
 //     if (token && userData) {
 //       try {
 //         const decoded = jwtDecode(token);
-//         setUser(JSON.parse(userData));
-//         api.defaults.headers.common['Authorization'] = Bearer ${token};
-//       } catch {
+
+//         // ✅ Check if token is expired
+//         if (decoded.exp * 1000 > Date.now()) {
+//           setUser(JSON.parse(userData));
+//           api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+//         } else {
+//           logout();
+//         }
+//       } catch (err) {
 //         logout();
 //       }
 //     }
+
 //     setLoading(false);
 //   }, []);
 
 //   async function login(email, password) {
-//     const { data } = await api.post('/api/auth/login', { email, password });
-//     localStorage.setItem('token', data.token);
-//     localStorage.setItem('user', JSON.stringify(data.user));
-//     api.defaults.headers.common['Authorization'] = Bearer ${data.token};
+//     const { data } = await api.post("/api/auth/login", { email, password });
+
+//     localStorage.setItem("token", data.token);
+//     localStorage.setItem("user", JSON.stringify(data.user));
+
+//     api.defaults.headers.common["Authorization"] = `Bearer ${data.token}`;
 //     setUser(data.user);
 //   }
 
 //   function logout() {
-//     localStorage.removeItem('token');
-//     localStorage.removeItem('user');
+//     localStorage.removeItem("token");
+//     localStorage.removeItem("user");
 //     setUser(null);
-//     window.location.href = '/login';
+//     window.location.href = "/login";
 //   }
 
 //   return (
@@ -118,3 +153,59 @@ export function AuthProvider({ children }) {
 //     </AuthCtx.Provider>
 //   );
 // }
+
+// // import { createContext, useContext, useEffect, useState } from 'react';
+// // import axios from 'axios';
+// // import jwtDecode from "jwt-decode";
+
+// // const AuthCtx = createContext(null);
+
+// // const api = axios.create({
+// //   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:4000',
+// // });
+
+// // export function useAuth() {
+// //   return useContext(AuthCtx);
+// // }
+
+// // export function AuthProvider({ children }) {
+// //   const [user, setUser] = useState(null);
+// //   const [loading, setLoading] = useState(true);
+
+// //   useEffect(() => {
+// //     const token = localStorage.getItem('token');
+// //     const userData = localStorage.getItem('user');
+
+// //     if (token && userData) {
+// //       try {
+// //         const decoded = jwtDecode(token);
+// //         setUser(JSON.parse(userData));
+// //         api.defaults.headers.common['Authorization'] = Bearer ${token};
+// //       } catch {
+// //         logout();
+// //       }
+// //     }
+// //     setLoading(false);
+// //   }, []);
+
+// //   async function login(email, password) {
+// //     const { data } = await api.post('/api/auth/login', { email, password });
+// //     localStorage.setItem('token', data.token);
+// //     localStorage.setItem('user', JSON.stringify(data.user));
+// //     api.defaults.headers.common['Authorization'] = Bearer ${data.token};
+// //     setUser(data.user);
+// //   }
+
+// //   function logout() {
+// //     localStorage.removeItem('token');
+// //     localStorage.removeItem('user');
+// //     setUser(null);
+// //     window.location.href = '/login';
+// //   }
+
+// //   return (
+// //     <AuthCtx.Provider value={{ user, login, logout, api, loading }}>
+// //       {children}
+// //     </AuthCtx.Provider>
+// //   );
+// // }

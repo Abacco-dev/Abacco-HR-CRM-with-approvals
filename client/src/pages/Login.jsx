@@ -7,7 +7,7 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("admin@abacco.com");
-  const [password, setPassword] = useState("admin1234");
+  const [password, setPassword] = useState("admin123");
   const [err, setErr] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
@@ -22,33 +22,42 @@ export default function Login() {
 
     try {
       const response = await login(email, password);
-      
-      // Determine role - adjust based on your auth response structure
-      const role = response?.role || response?.user?.role || "employee";
-      setUserRole(role.toLowerCase());
-      
-      // Set welcome message based on role
-      let message = "";
-      const roleLower = role.toLowerCase();
-      if (roleLower === "admin") {
-        message = "Welcome Admin!";
-      } else if (roleLower === "manager") {
-        message = "Welcome Manager!";
-      } else {
-        message = "Welcome Employee!";
+
+      // ✅ The backend returns { token, user }
+      const { user, token } = response;
+
+      if (!user || !token) {
+        throw new Error("Invalid login response from server");
       }
-      
+
+      // ✅ Save to localStorage for Attendance page
+      localStorage.setItem("user", JSON.stringify(user));
+      localStorage.setItem("token", token);
+
+      // ✅ Set role & welcome message
+      const role = user.role?.toLowerCase() || "employee";
+      setUserRole(role);
+
+      const message =
+        role === "admin"
+          ? "Welcome Admin!"
+          : role === "manager"
+            ? "Welcome Manager!"
+            : "Welcome Employee!";
+
       setWelcomeMessage(message);
       setShowWelcome(true);
 
-      // Redirect after showing welcome message
+      // ✅ Redirect after showing welcome screen
       setTimeout(() => {
         navigate("/");
       }, 3000);
     } catch (e) {
-      setErr(e?.response?.data?.error || "Login failed");
+      console.error("❌ Login error:", e);
+      setErr(e?.response?.data?.error || e.message || "Login failed");
       setLoading(false);
     }
+
   }
 
   return (
@@ -80,7 +89,7 @@ export default function Login() {
                 <div className="relative">
                   {/* Rotating Border */}
                   <div className="w-40 h-40 border-4 border-white/30 border-t-white rounded-full animate-spin-slow absolute inset-0"></div>
-                  
+
                   {/* Icon Container */}
                   <div className="w-40 h-40 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm animate-float-icon">
                     {userRole === "admin" ? (
@@ -91,25 +100,25 @@ export default function Login() {
                       <Users className="w-20 h-20 text-white animate-icon-pop" />
                     )}
                   </div>
-                  
+
                   {/* Success Check */}
                   <div className="absolute -bottom-2 -right-2 bg-white rounded-full p-2 animate-check-pop">
                     <CheckCircle className="w-10 h-10 text-green-500" />
                   </div>
-                  
+
                   {/* Sparkles */}
                   <Sparkles className="w-8 h-8 text-yellow-300 absolute -top-4 -right-4 animate-twinkle-1" />
                   <Sparkles className="w-6 h-6 text-yellow-300 absolute -bottom-4 -left-4 animate-twinkle-2" />
                 </div>
               </div>
-              
+
               {/* Text with Slide Animation */}
               <div className="overflow-hidden mb-3">
                 <h2 className="text-6xl md:text-7xl font-bold text-white animate-slide-in-top">
                   Success!
                 </h2>
               </div>
-              
+
               <div className="overflow-hidden mb-8">
                 <p className="text-3xl md:text-4xl text-white/95 font-medium animate-slide-in-bottom">
                   {welcomeMessage}
@@ -120,7 +129,7 @@ export default function Login() {
               <div className="w-64 h-1 bg-white/20 rounded-full mx-auto overflow-hidden">
                 <div className="h-full bg-white rounded-full animate-loading-bar"></div>
               </div>
-              
+
               {/* Redirecting Text */}
               <p className="text-white/80 text-sm mt-4 flex items-center justify-center gap-2 animate-fade-in-delayed">
                 Redirecting you now <ArrowRight className="w-4 h-4 animate-arrow-move" />
@@ -136,7 +145,7 @@ export default function Login() {
         <div className="text-center mb-8 animate-fade-in">
           <div className="flex items-center justify-center gap-3 mb-2">
             <Users className="w-10 h-10" style={{ color: '#7F27FF' }} />
-            <h1 className="text-4xl md:text-5xl font-bold tracking-tight" style={{ 
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tight" style={{
               backgroundImage: 'linear-gradient(to right, #7F27FF, #9D4EDD, #C77DFF)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
@@ -153,7 +162,7 @@ export default function Login() {
         {/* Login Card */}
         <div className="w-full max-w-md animate-slide-up">
           <div className="bg-white p-8 rounded-3xl shadow-2xl border-2 border-gray-100">
-            <h2 className="text-3xl font-bold mb-2 text-center" style={{ 
+            <h2 className="text-3xl font-bold mb-2 text-center" style={{
               backgroundImage: 'linear-gradient(to right, #7F27FF, #9D4EDD)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
@@ -162,7 +171,7 @@ export default function Login() {
               Welcome Back
             </h2>
             <p className="text-gray-500 text-center mb-6">Sign in to continue</p>
-            
+
             {err && (
               <div className="mb-6 p-4 bg-red-50 text-red-600 rounded-xl border-2 border-red-200 animate-shake">
                 <p className="font-medium text-center">{err}</p>
@@ -215,7 +224,7 @@ export default function Login() {
               <button
                 type="submit"
                 className="w-full text-white py-3 rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl mt-6"
-                style={{ 
+                style={{
                   backgroundImage: 'linear-gradient(to right, #7F27FF, #9D4EDD)',
                 }}
                 disabled={loading || showWelcome}
@@ -236,7 +245,7 @@ export default function Login() {
 
             {/* Tip */}
             <p className="text-xs text-gray-500 text-center mt-6 bg-gray-50 p-3 rounded-lg">
-              💡 Tip: Use seeded credentials admin@abacco.com / admin1234
+              💡 Tip: Use seeded credentials admin@abacco.com / admin123
             </p>
           </div>
         </div>

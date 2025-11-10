@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Clock, Calendar, User, Timer, AlertCircle, CheckCircle, XCircle, Plus, Eye, Download } from 'lucide-react';
+import LeaveModal from "./components/LeaveModal";
+import OvertimeModal from "./components/OvertimeModal";
+
 
 export default function AttendanceManagement() {
   // -------------------------
@@ -14,78 +17,12 @@ export default function AttendanceManagement() {
   });
 
   // Attendance Records (kept original sample entries)
- const [attendanceList, setAttendanceList] = useState([
-  {
-    id: 1,
-    date: "2024-09-16",
-    status: "Present",
-    clockIn: "09:15 AM",
-    clockOut: "06:30 PM",
-    workHours: 8.25,
-    overtime: 0.5,
-    location: "Office - Biometric",
-    breaks: [
-      { start: "01:00 PM", end: "02:00 PM", duration: 60 }
-    ],
-    extraBreak: 0.25,
-    mouseClicks: 1523,
-    keyPresses: 3421
-  },
-  {
-    id: 2,
-    date: "2024-09-15",
-    status: "Present",
-    clockIn: "08:45 AM",
-    clockOut: "05:45 PM",
-    workHours: 8.0,
-    overtime: 0,
-    location: "Office - Mobile App",
-    breaks: [
-      { start: "01:15 PM", end: "02:00 PM", duration: 45 }
-    ],
-    extraBreak: 0.1,
-    mouseClicks: 1280,
-    keyPresses: 2985
-  },
-  {
-    id: 3,
-    date: "2024-09-14",
-    status: "Late",
-    clockIn: "10:30 AM",
-    clockOut: "06:00 PM",
-    workHours: 6.5,
-    overtime: 0,
-    location: "Office - Biometric",
-    breaks: [
-      { start: "01:30 PM", end: "02:30 PM", duration: 60 }
-    ],
-    extraBreak: 0.5,
-    mouseClicks: 965,
-    keyPresses: 2100
-  },
-  {
-    id: 4,
-    date: "2024-09-13",
-    status: "Absent",
-    clockIn: null,
-    clockOut: null,
-    workHours: 0,
-    overtime: 0,
-    location: null,
-    breaks: [],
-    reason: "Sick Leave",
-    extraBreak: 0,
-    mouseClicks: 0,
-    keyPresses: 0
-  }
-]);
+  const [attendanceList, setAttendanceList] = useState([]);
+
 
   // Leave/Ovetime/Shift states (unchanged)
-  const [leaveRequests, setLeaveRequests] = useState([
-    { id: 1, type: "Sick Leave", startDate: "2024-09-20", endDate: "2024-09-21", days: 2, reason: "Fever and cold", status: "Pending", appliedOn: "2024-09-17", approver: "Priya Sharma" },
-    { id: 2, type: "Casual Leave", startDate: "2024-09-25", endDate: "2024-09-25", days: 1, reason: "Personal work", status: "Approved", appliedOn: "2024-09-15", approver: "Priya Sharma" },
-    { id: 3, type: "Annual Leave", startDate: "2024-10-10", endDate: "2024-10-12", days: 3, reason: "Family vacation", status: "Rejected", appliedOn: "2024-09-10", approver: "Priya Sharma", comments: "Peak project period" }
-  ]);
+  const [leaveRequests, setLeaveRequests] = useState([]);
+
 
   const [shifts, setShifts] = useState([
     { id: 1, name: "Morning Shift", startTime: "09:00", endTime: "18:00", breakDuration: 60, days: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"] },
@@ -97,11 +34,14 @@ export default function AttendanceManagement() {
     { id: 2, date: "2024-09-18", startTime: "18:00", endTime: "19:30", duration: 1.5, reason: "Client meeting", status: "Pending", approver: "Priya Sharma", appliedOn: "2024-09-17" }
   ]);
 
-  const [leaveBalance] = useState({
-    sick: { used: 3, total: 12, remaining: 9 },
-    casual: { used: 5, total: 10, remaining: 5 },
-    annual: { used: 8, total: 20, remaining: 12 }
+
+  const [leaveBalance, setLeaveBalance] = useState({
+    sick: { used: 0, total: 12 },
+    casual: { used: 0, total: 10 },
+    annual: { used: 0, total: 20 },
   });
+
+
 
   // UI states
   const [loading, setLoading] = useState(false);
@@ -149,6 +89,155 @@ export default function AttendanceManagement() {
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // ✅ Fetch attendance records (including today's) from DB
+// ✅ Fetch all attendance records (including today's) from backend
+useEffect(() => {
+  async function fetchAttendance() {
+    try {
+      const res = await fetch("http://localhost:4000/api/attendance", {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+
+      const data = await res.json();
+
+      if (data.success && Array.isArray(data.records)) {
+        setAttendanceList(data.records);
+
+        // Find today’s record (optional, to show in "Today's Status")
+        const today = new Date().toISOString().split("T")[0];
+        const todayRec = data.records.find(
+          (r) => new Date(r.date).toISOString().split("T")[0] === today
+        );
+
+        if (todayRec) {
+          setTodayStatus({
+            clockedIn: !!todayRec.clockIn,
+            clockedOut: !!todayRec.clockOut,
+            clockInTime: todayRec.clockIn
+              ? new Date(todayRec.clockIn).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: true,
+                })
+              : "",
+            clockOutTime: todayRec.clockOut
+              ? new Date(todayRec.clockOut).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: true,
+                })
+              : "",
+            totalHours:
+              todayRec.clockIn && todayRec.clockOut
+                ? (
+                    (new Date(todayRec.clockOut) - new Date(todayRec.clockIn)) /
+                    (1000 * 60 * 60)
+                  ).toFixed(2) + "h"
+                : "",
+            currentTime: new Date().toLocaleTimeString(),
+          });
+        }
+      } else {
+        console.warn("⚠️ Unexpected response format:", data);
+        setAttendanceList([]);
+      }
+    } catch (error) {
+      console.error("❌ Failed to fetch attendance:", error);
+      setAttendanceList([]);
+    }
+  }
+
+  fetchAttendance();
+}, []);
+
+
+  // ✅ Fetch Leave Requests (use correct backend route by role)
+  useEffect(() => {
+    async function fetchLeaves() {
+      try {
+        // Read logged-in user from localStorage (must be stored at login)
+        const storedUser = localStorage.getItem("user");
+        const user = storedUser ? JSON.parse(storedUser) : null;
+
+        // Decide endpoint based on role
+        let endpoint = "http://localhost:4000/api/leaves/employee"; // default
+        if (user && (user.role === "ADMIN" || user.role === "MANAGER")) {
+          endpoint = "http://localhost:4000/api/leaves/admin";
+        }
+
+        const res = await fetch(endpoint, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+
+        const data = await res.json();
+
+        if (data.success && Array.isArray(data.leaves)) {
+          setLeaveRequests(data.leaves);
+        } else if (Array.isArray(data)) {
+          setLeaveRequests(data);
+        } else {
+          console.error("Unexpected response format:", data);
+        }
+      } catch (error) {
+        console.error("❌ Failed to fetch leaves:", error);
+      }
+    }
+
+    fetchLeaves();
+  }, []);
+
+
+
+
+
+
+  useEffect(() => {
+    async function fetchLeaveBalance() {
+      try {
+        const res = await fetch("http://localhost:4000/api/leaves/balance", {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+        const data = await res.json();
+
+        const updated = {
+          sick: {
+            ...data.sick,
+            remaining: data.sick.total - data.sick.used,
+          },
+          casual: {
+            ...data.casual,
+            remaining: data.casual.total - data.casual.used,
+          },
+          annual: {
+            ...data.annual,
+            remaining: data.annual.total - data.annual.used,
+          },
+        };
+
+        setLeaveBalance(updated);
+      } catch (err) {
+        console.error("Error fetching leave balance:", err);
+      }
+    }
+
+    // Load once
+    fetchLeaveBalance();
+
+    // 🔁 Re-fetch every 10 seconds (sync with fetchLeaves)
+    const interval = setInterval(fetchLeaveBalance, 10000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+
+
 
   // --------------------------------
   // Helper: get today's company rules
@@ -245,123 +334,141 @@ export default function AttendanceManagement() {
   // Augmented to compute extraBreak and attach mouse/keyboard stats to attendance record
   const handleClockAction = async (action) => {
     setLoading(true);
+    try {
+      const endpoint =
+        action === "clock-in"
+          ? "http://localhost:4000/api/attendance/clock-in"
+          : "http://localhost:4000/api/attendance/clock-out";
 
-    setTimeout(() => {
-      const now = new Date();
-
-      // ✅ Format time as "hh:mm AM/PM"
-      const currentTime = now.toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
       });
 
-      // ✅ Store ISO date for the record
-      const isoDate = now.toISOString().split('T')[0];
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Error performing action");
 
-      // Check if today is an off day
-      if (loginStart === 'OFF') {
-        alert('Today is an off day — no clock-in required.');
-        setLoading(false);
-        return;
-      }
+      // Immediately refetch updated record
+      const todayRes = await fetch("http://localhost:4000/api/attendance/today", {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      const todayData = await todayRes.json();
 
-      // Parse shift start time for late check
-      const [shiftHour, shiftMinute] = loginStart.split(':').map(Number);
-      const shiftStartTime = new Date(now);
-      shiftStartTime.setHours(shiftHour, shiftMinute, 0, 0);
-
-      let status = now > shiftStartTime ? "Late" : "Present";
-
-      // 🕒 CLOCK IN
-      if (action === 'clock-in') {
-        setTodayStatus(prev => ({
-          ...prev,
-          clockedIn: true,
-          clockInTime: currentTime, // ✅ "08:15 AM"
-        }));
-
-        // reset activity counters
-        setActivity({
-          mouseLeft: 0,
-          mouseRight: 0,
-          keyPress: 0,
-          activeTime: 0,
-          idleTime: 0,
-          idle: false,
-          lastActive: new Date()
+      if (todayData?.record) {
+        setTodayStatus({
+          clockedIn: !!todayData.record.clockIn,
+          clockedOut: !!todayData.record.clockOut,
+          clockInTime: todayData.record.clockIn
+            ? new Date(todayData.record.clockIn).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: true,
+            })
+            : "",
+          clockOutTime: todayData.record.clockOut
+            ? new Date(todayData.record.clockOut).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: true,
+            })
+            : "",
+          totalHours:
+            todayData.record.clockIn && todayData.record.clockOut
+              ? (
+                (new Date(todayData.record.clockOut) -
+                  new Date(todayData.record.clockIn)) /
+                (1000 * 60 * 60)
+              ).toFixed(2) + "h"
+              : "",
+          currentTime: new Date().toLocaleTimeString(),
         });
 
-        setLoading(false);
-        return;
+        setAttendanceList([todayData.record]);
       }
-
-      // 🕕 CLOCK OUT
-      if (action === 'clock-out') {
-        const totalActiveSeconds = activity.activeTime;
-        const totalIdleSeconds = activity.idleTime;
-        const totalHours = ((totalActiveSeconds + totalIdleSeconds) / 3600).toFixed(2);
-        const extraBreakHours = Math.max((totalIdleSeconds / 3600) - allowedBreak, 0).toFixed(2);
-
-        // ✅ Build record with readable times
-        const newRecord = {
-          id: attendanceList.length + 1,
-          date: isoDate,
-          status,
-          clockIn: todayStatus.clockInTime,   // e.g. "08:15 AM"
-          clockOut: currentTime,              // e.g. "06:45 PM"
-          workHours: Math.max((totalHours - allowedBreak), 0).toFixed(2),
-          overtime: 0,
-          location: "Office - Mobile App",
-          breaks: [],
-          extraBreak: parseFloat(extraBreakHours),
-          mouseClicks: activity.mouseLeft + activity.mouseRight,
-          keyPresses: activity.keyPress
-        };
-
-        // Update status + list
-        setTodayStatus(prev => ({
-          ...prev,
-          clockedOut: true,
-          clockOutTime: currentTime,
-          totalHours: newRecord.workHours + 'h'
-        }));
-
-        setAttendanceList(prev => [newRecord, ...prev]);
-      }
-
+    } catch (error) {
+      alert(error.message);
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
+
+
 
   // ------------------------------
   // Leave / Overtime submit (unchanged)
   // ------------------------------
-  const handleLeaveSubmit = () => {
-    if (!newLeaveRequest.type || !newLeaveRequest.startDate || !newLeaveRequest.endDate || !newLeaveRequest.reason) {
-      alert('Please fill all fields');
-      return;
+  const handleLeaveSubmit = async () => {
+    try {
+      const { type, startDate, endDate, reason } = newLeaveRequest;
+
+      // ✅ Validate fields
+      if (!type || !startDate || !endDate || !reason) {
+        alert("Please fill all required fields before submitting.");
+        return;
+      }
+
+      setLoading(true);
+
+      // ✅ Submit to backend
+      const res = await fetch("http://localhost:4000/api/leaves", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({ type, startDate, endDate, reason }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to apply leave");
+
+      // ✅ Add to table
+      setLeaveRequests((prev) => [data.leave, ...prev]);
+
+      // ✅ Re-fetch updated balances
+      const balanceRes = await fetch("http://localhost:4000/api/leaves/balance", {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      const balanceData = await balanceRes.json();
+
+      // ✅ Recalculate
+      const updatedBalance = {
+        sick: {
+          ...balanceData.sick,
+          remaining: balanceData.sick.total - balanceData.sick.used,
+        },
+        casual: {
+          ...balanceData.casual,
+          remaining: balanceData.casual.total - balanceData.casual.used,
+        },
+        annual: {
+          ...balanceData.annual,
+          remaining: balanceData.annual.total - balanceData.annual.used,
+        },
+      };
+
+      setLeaveBalance(updatedBalance);
+
+      // ✅ Close modal and clear fields
+      setNewLeaveRequest({ type: "", startDate: "", endDate: "", reason: "" });
+      setShowLeaveModal(false);
+
+      console.log("✅ Leave applied successfully:", data.leave);
+    } catch (error) {
+      console.error("❌ Error submitting leave:", error);
+      alert(error.message || "Something went wrong while applying leave.");
+    } finally {
+      setLoading(false);
     }
-    const startDate = new Date(newLeaveRequest.startDate);
-    const endDate = new Date(newLeaveRequest.endDate);
-    const days = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
-
-    const leave = {
-      id: leaveRequests.length + 1,
-      type: newLeaveRequest.type,
-      startDate: newLeaveRequest.startDate,
-      endDate: newLeaveRequest.endDate,
-      days,
-      reason: newLeaveRequest.reason,
-      status: 'Pending',
-      appliedOn: new Date().toISOString().split('T')[0],
-      approver: 'Priya Sharma'
-    };
-
-    setLeaveRequests(prev => [leave, ...prev]);
-    setNewLeaveRequest({ type: '', startDate: '', endDate: '', reason: '' });
-    setShowLeaveModal(false);
   };
+
+
+
 
   const handleOvertimeSubmit = () => {
     if (!newOvertimeRequest.date || !newOvertimeRequest.startTime || !newOvertimeRequest.endTime || !newOvertimeRequest.reason) {
@@ -393,30 +500,113 @@ export default function AttendanceManagement() {
   // Utility helpers (unchanged visuals)
   // ------------------------------
   const getStatusColor = (status) => {
+    if (!status || typeof status !== "string") return "text-gray-600 bg-gray-50"; // fallback
+
     switch (status.toLowerCase()) {
-      case 'present': return 'text-green-600 bg-green-50';
-      case 'absent': return 'text-red-600 bg-red-50';
-      case 'late': return 'text-yellow-600 bg-yellow-50';
-      case 'approved': return 'text-green-600 bg-green-50';
-      case 'rejected': return 'text-red-600 bg-red-50';
-      case 'pending': return 'text-blue-600 bg-blue-50';
-      default: return 'text-gray-600 bg-gray-50';
+      case "present":
+        return "text-green-600 bg-green-50";
+      case "absent":
+        return "text-red-600 bg-red-50";
+      case "late":
+        return "text-yellow-600 bg-yellow-50";
+      case "approved":
+        return "text-green-600 bg-green-50";
+      case "rejected":
+        return "text-red-600 bg-red-50";
+      case "pending":
+        return "text-blue-600 bg-blue-50";
+      default:
+        return "text-gray-600 bg-gray-50";
     }
   };
 
-// ✅ Get total working hours for the current day only
-const getTotalHours = () => {
-  const today = new Date();
-  const day = today.getDay(); // 0 = Sunday, 1 = Monday, ...
 
-  // Office timing logic (matches your getTodayLoginTiming)
-  if (day >= 1 && day <= 5) return "10.00";   // Mon–Fri: 10 hours shift
-  if (day === 6) return "8.00";               // Sat: 8 hours shift
-  return "OFF";                               // Sun: Off day
-};
+  // ✅ Get total working hours for the current day only
+  const getTotalHours = () => {
+    const today = new Date();
+    const day = today.getDay(); // 0 = Sunday, 1 = Monday, ...
+
+    // Office timing logic (matches your getTodayLoginTiming)
+    if (day >= 1 && day <= 5) return "10.00";   // Mon–Fri: 10 hours shift
+    if (day === 6) return "8.00";               // Sat: 8 hours shift
+    return "OFF";                               // Sun: Off day
+  };
 
 
   const getTotalOvertime = () => attendanceList.reduce((sum, r) => sum + (r.overtime || 0), 0);
+
+  // 🔹 Export attendanceList to CSV
+  const handleExportCSV = () => {
+    if (!attendanceList || attendanceList.length === 0) {
+      alert("No attendance data to export.");
+      return;
+    }
+
+    // Define CSV headers
+    const headers = [
+      "Date",
+      "Status",
+      "Clock In",
+      "Clock Out",
+      "Work Hours",
+      "Extra Break (hrs)",
+      "Mouse Clicks",
+      "Key Presses",
+    ];
+
+    // Map data rows
+    const rows = attendanceList.map((record) => [
+      new Date(record.date).toLocaleDateString("en-GB"),
+      record.status || "-",
+      record.clockIn
+        ? new Date(record.clockIn).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        })
+        : "-",
+      record.clockOut
+        ? new Date(record.clockOut).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        })
+        : "-",
+      record.workHours || "-",
+      record.extraBreak || "-",
+      record.mouseClicks ?? "-",
+      record.keyPresses ?? "-",
+    ]);
+
+    // Combine header + rows
+    const csvContent =
+      [headers, ...rows]
+        .map((row) =>
+          row
+            .map((value) =>
+              typeof value === "string" && value.includes(",")
+                ? `"${value}"` // wrap values with commas
+                : value
+            )
+            .join(",")
+        )
+        .join("\n");
+
+    // Create CSV Blob and trigger download
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute(
+      "download",
+      `Attendance_Records_${new Date().toLocaleDateString("en-GB")}.csv`
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
 
   // ------------------------------
   // Render (keeps your original layout, with new columns added)
@@ -604,47 +794,103 @@ const getTotalHours = () => {
               <div>
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-semibold">Attendance Records</h3>
-                  <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+                  <button
+                    onClick={handleExportCSV}
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                  >
                     <Download className="w-4 h-4" />
                     Export
                   </button>
+
                 </div>
                 <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b text-left">
-                        <th className="py-3 px-4 font-medium text-gray-700">Date</th>
-                        <th className="py-3 px-4 font-medium text-gray-700">Status</th>
-                        <th className="py-3 px-4 font-medium text-gray-700">Clock In</th>
-                        <th className="py-3 px-4 font-medium text-gray-700">Clock Out</th>
-                        <th className="py-3 px-4 font-medium text-gray-700">Work Hours</th>
-                        <th className="py-3 px-4 font-medium text-gray-700">Extra Break (hrs)</th>
-                        <th className="py-3 px-4 font-medium text-gray-700">Mouse</th>
-                        <th className="py-3 px-4 font-medium text-gray-700">Keys</th>
-                        {/* <th className="py-3 px-4 font-medium text-gray-700">Location</th> */}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {attendanceList.map((record) => (
-                        <tr key={record.id} className="border-b hover:bg-gray-50">
-                          <td className="py-3 px-4">{new Date(record.date).toLocaleDateString('en-IN')}</td>
-                          <td className="py-3 px-4">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(record.status)}`}>
-                              {record.status}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4">{record.clockIn || '-'}</td>
-                          <td className="py-3 px-4">{record.clockOut || '-'}</td>
-
-                          <td className="py-3 px-4">{record.workHours}h</td>
-                          <td className="py-3 px-4 text-red-600 font-medium">{record.extraBreak ? `${record.extraBreak}h` : '-'}</td>
-                          <td className="py-3 px-4 text-gray-600">{record.mouseClicks ?? '-'}</td>
-                          <td className="py-3 px-4 text-gray-600">{record.keyPresses ?? '-'}</td>
-                          <td className="py-3 px-4 text-gray-600 text-sm">{record.location || '-'}</td>
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="border-b bg-gray-50 text-center">
+                          <th className="py-3 px-4 font-semibold text-gray-700">Date</th>
+                          <th className="py-3 px-4 font-semibold text-gray-700">Status</th>
+                          <th className="py-3 px-4 font-semibold text-gray-700">Clock In</th>
+                          <th className="py-3 px-4 font-semibold text-gray-700">Clock Out</th>
+                          <th className="py-3 px-4 font-semibold text-gray-700">Work Hours</th>
+                          <th className="py-3 px-4 font-semibold text-gray-700">Extra Break (hrs)</th>
+                          <th className="py-3 px-4 font-semibold text-gray-700">Mouse</th>
+                          <th className="py-3 px-4 font-semibold text-gray-700">Keys</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+
+                      <tbody>
+                        {attendanceList.length > 0 ? (
+                          attendanceList.map((record) => (
+                            <tr
+                              key={record.id}
+                              className="border-b hover:bg-gray-50 text-center text-gray-700 transition-colors"
+                            >
+                              <td className="py-3 px-4 whitespace-nowrap">
+                                {new Date(record.date).toLocaleDateString("en-GB")}
+                              </td>
+
+                              <td className="py-3 px-4">
+                                <span
+                                  className={`px-3 py-1 rounded-full text-xs font-semibold ${record.status.toLowerCase() === "present"
+                                    ? "bg-green-50 text-green-600"
+                                    : record.status.toLowerCase() === "absent"
+                                      ? "bg-red-50 text-red-600"
+                                      : record.status.toLowerCase() === "late"
+                                        ? "bg-yellow-50 text-yellow-600"
+                                        : "bg-gray-100 text-gray-600"
+                                    }`}
+                                >
+                                  {record.status}
+                                </span>
+                              </td>
+
+                              <td className="py-3 px-4">
+                                {record.clockIn
+                                  ? new Date(record.clockIn).toLocaleTimeString([], {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    hour12: true,
+                                  })
+                                  : "-"}
+                              </td>
+
+                              <td className="py-3 px-4">
+                                {record.clockOut
+                                  ? new Date(record.clockOut).toLocaleTimeString([], {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    hour12: true,
+                                  })
+                                  : "-"}
+                              </td>
+
+                              <td className="py-3 px-4 font-medium">
+                                {record.workHours ? `${record.workHours}h` : "-"}
+                              </td>
+
+                              <td className="py-3 px-4 text-red-600 font-medium">
+                                {record.extraBreak ? `${record.extraBreak}h` : "-"}
+                              </td>
+
+                              <td className="py-3 px-4">{record.mouseClicks ?? "-"}</td>
+                              <td className="py-3 px-4">{record.keyPresses ?? "-"}</td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td
+                              colSpan="8"
+                              className="py-6 text-gray-500 text-center italic"
+                            >
+                              No attendance records available.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
                 </div>
               </div>
             )}
@@ -687,10 +933,10 @@ const getTotalHours = () => {
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
-                      <tr className="border-b text-left">
+                      <tr className="border-b text-center ">
                         <th className="py-3 px-4 font-medium text-gray-700">Type</th>
                         <th className="py-3 px-4 font-medium text-gray-700">Dates</th>
-                        <th className="py-3 px-4 font-medium text-gray-700">Days</th>
+                        <th className="py-3 px-4 font-medium text-gray-700">Days</th>  {/* ✅ already there */}
                         <th className="py-3 px-4 font-medium text-gray-700">Reason</th>
                         <th className="py-3 px-4 font-medium text-gray-700">Status</th>
                         <th className="py-3 px-4 font-medium text-gray-700">Applied On</th>
@@ -698,19 +944,21 @@ const getTotalHours = () => {
                     </thead>
                     <tbody>
                       {leaveRequests.map((leave) => (
-                        <tr key={leave.id} className="border-b hover:bg-gray-50">
+                        <tr key={leave.id} className="border-b text-center hover:bg-gray-50">
                           <td className="py-3 px-4 font-medium">{leave.type}</td>
                           <td className="py-3 px-4">
                             {new Date(leave.startDate).toLocaleDateString()} - {new Date(leave.endDate).toLocaleDateString()}
                           </td>
-                          <td className="py-3 px-4">{leave.days}</td>
+                          <td className="py-3 px-4">{leave.noOfDays}</td> {/* ✅ show from backend */}
                           <td className="py-3 px-4 text-gray-600">{leave.reason}</td>
                           <td className="py-3 px-4">
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(leave.status)}`}>
                               {leave.status}
                             </span>
                           </td>
-                          <td className="py-3 px-4">{new Date(leave.appliedOn).toLocaleDateString()}</td>
+                          <td className="py-3 px-4">
+                            {leave.createdAt ? new Date(leave.createdAt).toLocaleDateString("en-GB") : "-"}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -800,6 +1048,27 @@ const getTotalHours = () => {
           </div>
         </div>
       </div>
+
+      {/* Leave Modal */}
+      {showLeaveModal && (
+        <LeaveModal
+          setShowLeaveModal={setShowLeaveModal}
+          newLeaveRequest={newLeaveRequest}
+          setNewLeaveRequest={setNewLeaveRequest}
+          handleLeaveSubmit={handleLeaveSubmit}
+        />
+      )}
+
+      {/* Overtime Modal */}
+      {showOvertimeModal && (
+        <OvertimeModal
+          setShowOvertimeModal={setShowOvertimeModal}
+          newOvertimeRequest={newOvertimeRequest}
+          setNewOvertimeRequest={setNewOvertimeRequest}
+          handleOvertimeSubmit={handleOvertimeSubmit}
+        />
+      )}
+
     </div>
   );
 }

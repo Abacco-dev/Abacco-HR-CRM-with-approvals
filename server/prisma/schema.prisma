@@ -65,6 +65,7 @@ model User {
   requestedApprovals ApprovalRequest[]   @relation("ApprovalRequester")
   reviewedApprovals  ApprovalRequest[]   @relation("ApprovalReviewer")
   skills             UserSkill[]
+  TeamMessage        TeamMessage[]
 }
 
 model EmployeeProfile {
@@ -111,12 +112,14 @@ model Document {
 }
 
 model Team {
-  id          String       @id @default(cuid())
-  name        String       @unique
-  leader      User         @relation("TeamLeader", fields: [leaderId], references: [id])
-  leaderId    String
-  members     TeamMember[]
-  teamTargets Target[]
+  id               String             @id @default(cuid())
+  name             String             @unique
+  leader           User               @relation("TeamLeader", fields: [leaderId], references: [id])
+  leaderId         String
+  members          TeamMember[]
+  teamTargets      Target[]
+  TeamMessage      TeamMessage[]
+  TeamNotification TeamNotification[]
 }
 
 model TeamMember {
@@ -180,6 +183,9 @@ model LeaveRequest {
   endDate   DateTime
   status    String   @default("PENDING")
   reason    String?
+  isUpdated Boolean  @default(false)
+  noOfDays  Int?     @default(0)
+  createdAt DateTime @default(now()) // ✅ Add this line
 }
 
 model Training {
@@ -342,4 +348,30 @@ model Employee {
   name  String
   email String @unique
   role  String
+}
+
+model TeamMessage {
+  id        String   @id @default(cuid())
+  team      Team     @relation(fields: [teamId], references: [id])
+  teamId    String
+  sender    User     @relation(fields: [senderId], references: [id])
+  senderId  String
+  content   String
+  createdAt DateTime @default(now())
+}
+
+model TeamNotification {
+  id        String   @id @default(cuid())
+  team      Team     @relation(fields: [teamId], references: [id])
+  teamId    String
+  message   String
+  type      String
+  createdAt DateTime @default(now())
+}
+
+model Announcement {
+  id        String   @id @default(cuid())
+  title     String
+  desc      String?
+  createdAt DateTime @default(now())
 }

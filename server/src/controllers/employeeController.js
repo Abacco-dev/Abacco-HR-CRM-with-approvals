@@ -1,25 +1,31 @@
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
+// src/controllers/employeeController.js
+import prisma from "../prisma.js";
 
-// Get all employees
-exports.getEmployees = async (req, res, next) => {
+// ✅ Fetch all employees
+export const getAllEmployees = async (req, res) => {
   try {
-    const employees = await prisma.employee.findMany();
-    res.json(employees);
+    const employees = await prisma.employee.findMany({
+      orderBy: { id: "asc" },
+    });
+    res.status(200).json(employees);
   } catch (error) {
-    next(error);
+    console.error("Error fetching employees:", error);
+    res.status(500).json({ message: "Failed to fetch employees" });
   }
 };
 
-// Create new employee
-exports.createEmployee = async (req, res, next) => {
+// ✅ Fetch single employee by ID
+export const getEmployeeById = async (req, res) => {
+  const { id } = req.params;
   try {
-    const { name, email, role } = req.body;
-    const employee = await prisma.employee.create({
-      data: { name, email, role },
+    const employee = await prisma.employee.findUnique({
+      where: { id: Number(id) },
     });
-    res.status(201).json(employee);
+    if (!employee)
+      return res.status(404).json({ message: "Employee not found" });
+    res.status(200).json(employee);
   } catch (error) {
-    next(error);
+    console.error("Error fetching employee:", error);
+    res.status(500).json({ message: "Failed to fetch employee" });
   }
 };

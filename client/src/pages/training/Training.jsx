@@ -197,51 +197,51 @@ export default function Training() {
     });
 
   // Create new training
- const handleCreateTraining = async () => {
-  try {
-    if (user.role === "EMPLOYEE") {
-      alert("Employees are not allowed to create training programs.");
-      return;
+  const handleCreateTraining = async () => {
+    try {
+      if (user.role === "EMPLOYEE") {
+        alert("Employees are not allowed to create training programs.");
+        return;
+      }
+
+      if (user.role === "ADMIN") {
+        const id = Math.max(...trainings.map(t => t.id)) + 1;
+        const training = {
+          ...newTraining,
+          id,
+          enrolledCount: 0,
+          status: "UPCOMING",
+          skills: newTraining.skills.filter(skill => skill.trim()),
+          isEnrolled: false,
+          progress: 0,
+          completionRate: 0
+        };
+
+        setTrainings(prev => [...prev, training]);
+        alert("Training created successfully!");
+      } else {
+        await request("CREATE_TRAINING", "training", newTraining);
+        alert("Training creation request submitted for approval!");
+      }
+
+      setShowCreateModal(false);
+      setNewTraining({
+        title: "",
+        description: "",
+        duration: "",
+        level: "Beginner",
+        instructor: "",
+        maxCapacity: 20,
+        startDate: "",
+        endDate: "",
+        category: "Technical",
+        skills: []
+      });
+    } catch (error) {
+      console.error("Failed to create training:", error);
+      alert("Failed to create training. Please try again.");
     }
-
-    if (user.role === "ADMIN") {
-      const id = Math.max(...trainings.map(t => t.id)) + 1;
-      const training = {
-        ...newTraining,
-        id,
-        enrolledCount: 0,
-        status: "UPCOMING",
-        skills: newTraining.skills.filter(skill => skill.trim()),
-        isEnrolled: false,
-        progress: 0,
-        completionRate: 0
-      };
-
-      setTrainings(prev => [...prev, training]);
-      alert("Training created successfully!");
-    } else {
-      await request("CREATE_TRAINING", "training", newTraining);
-      alert("Training creation request submitted for approval!");
-    }
-
-    setShowCreateModal(false);
-    setNewTraining({
-      title: "",
-      description: "",
-      duration: "",
-      level: "Beginner",
-      instructor: "",
-      maxCapacity: 20,
-      startDate: "",
-      endDate: "",
-      category: "Technical",
-      skills: []
-    });
-  } catch (error) {
-    console.error("Failed to create training:", error);
-    alert("Failed to create training. Please try again.");
-  }
-};
+  };
 
 
   // Enroll in training
